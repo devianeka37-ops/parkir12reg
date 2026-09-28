@@ -1,14 +1,70 @@
 <?php
 
+use App\Http\Controllers\Admin\ParkirKendaraanController;
+use App\Http\Controllers\Admin\PenggunaController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Halaman Login
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/index');
 });
 
-Route::get('/index',function(){
+Route::get('/index', function () {
     return view('index');
-});
-Route::get('/dhasboard', function () {
-    return view('dhasboard');
-});
+})->name('login');
+
+Route::post('/login', [DashboardController::class, 'login'])
+    ->name('login.store');
+Route::get('/logout', [DashboardController::class, 'logout'])
+    ->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/dashboard', function () {
+    return redirect()->route('dhasboard');
+})->name('dashboard');
+
+Route::get('/dhasboard', [DashboardController::class, 'index'])
+    ->name('dhasboard');
+
+Route::post('/dashboard/users', [DashboardController::class, 'storeUser'])
+    ->name('dashboard.users.store');
+Route::post('/dashboard/tariffs', [DashboardController::class, 'storeTarif'])
+    ->name('dashboard.tariffs.store');
+Route::post('/dashboard/areas', [DashboardController::class, 'storeArea'])
+    ->name('dashboard.areas.store');
+Route::post('/dashboard/vehicles', [DashboardController::class, 'storeKendaraan'])
+    ->name('dashboard.vehicles.store');
+Route::post('/dashboard/transactions', [DashboardController::class, 'storeTransaksi'])
+    ->name('dashboard.transactions.store');
+Route::post('/dashboard/transactions/{id}/close', [DashboardController::class, 'closeTransaksi'])
+    ->name('dashboard.transactions.close');
+
+/*
+|--------------------------------------------------------------------------
+| Admin
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        // Kendaraan
+        Route::resource('kendaraan', ParkirKendaraanController::class)
+            ->except(['show']);
+
+        // Pengguna
+        Route::resource('pengguna', PenggunaController::class)
+            ->except(['show']);
+    });

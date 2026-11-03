@@ -39,10 +39,18 @@ Route::get('/dhasboard', [DashboardController::class, 'index'])
 
 Route::post('/dashboard/users', [DashboardController::class, 'storeUser'])
     ->name('dashboard.users.store');
+Route::put('/dashboard/users/{id}', [DashboardController::class, 'updateUser'])
+    ->name('dashboard.users.update');
+Route::delete('/dashboard/users/{id}', [DashboardController::class, 'deleteUser'])
+    ->name('dashboard.users.delete');
 Route::post('/dashboard/tariffs', [DashboardController::class, 'storeTarif'])
     ->name('dashboard.tariffs.store');
 Route::post('/dashboard/areas', [DashboardController::class, 'storeArea'])
     ->name('dashboard.areas.store');
+Route::put('/dashboard/areas/{id}', [DashboardController::class, 'updateArea'])
+    ->name('dashboard.areas.update');
+Route::delete('/dashboard/areas/{id}', [DashboardController::class, 'deleteArea'])
+    ->name('dashboard.areas.delete');
 Route::post('/dashboard/vehicles', [DashboardController::class, 'storeKendaraan'])
     ->name('dashboard.vehicles.store');
 Route::post('/dashboard/transactions', [DashboardController::class, 'storeTransaksi'])

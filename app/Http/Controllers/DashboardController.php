@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
 {
@@ -120,9 +121,71 @@ class DashboardController extends Controller
         return response()->json(['id' => $userId], 201);
     }
 
+    public function updateUser(Request $request, int $id): JsonResponse
+    {
+        $user = DB::table('tb_user')->where('id_user', $id)->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'Akun tidak ditemukan.'], 404);
+        }
+
+        $validated = $request->validate([
+            'nama_lengkap' => ['required', 'string', 'max:50'],
+            'username' => ['required', 'string', 'max:50', Rule::unique('tb_user', 'username')->ignore($id, 'id_user')],
+            'password' => ['nullable', 'string', 'min:6', 'max:100'],
+            'role' => ['required', 'in:admin,petugas,owner'],
+            'status_aktif' => ['required', 'boolean'],
+        ]);
+
+        $updates = [
+            'nama_lengkap' => $validated['nama_lengkap'],
+            'username' => $validated['username'],
+            'role' => $validated['role'],
+            'status_aktif' => $validated['status_aktif'],
+        ];
+
+        if (! empty($validated['password'])) {
+            $updates['password'] = Hash::make($validated['password']);
+        }
+
+        DB::table('tb_user')->where('id_user', $id)->update($updates);
+        $this->writeActivity($id, 'Memperbarui akun '.$validated['nama_lengkap']);
+
+        return response()->json(['message' => 'Akun berhasil diperbarui.']);
+    }
+
+    public function deleteUser(Request $request, int $id): JsonResponse
+    {
+        $user = DB::table('tb_user')->where('id_user', $id)->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'Akun tidak ditemukan.'], 404);
+        }
+
+        if ($request->session()->get('dashboard_user.username') === $user->username) {
+            return response()->json(['message' => 'Akun yang sedang digunakan tidak dapat dihapus.'], 422);
+        }
+
+        DB::transaction(function () use ($id, $user): void {
+            DB::table('tb_log_aktivitas')
+                ->where('id_user', $id)
+                ->update(['id_user' => null]);
+
+            DB::table('tb_transaksi')
+                ->where('id_user', $id)
+                ->update(['id_user' => null]);
+
+            DB::table('tb_user')->where('id_user', $id)->delete();
+            $this->writeActivity(null, 'Menghapus akun '.$user->nama_lengkap);
+        });
+
+        return response()->json(['message' => 'Akun berhasil dihapus.']);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:100'],
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
             'role' => ['required', 'in:admin,petugas,owner'],
@@ -162,7 +225,7 @@ class DashboardController extends Controller
         }
 
         $sessionUser = [
-            'name' => $demoAccount['name'],
+            'name' => $validated['name'] ?: $demoAccount['name'],
             'username' => $validated['username'],
             'role' => ucfirst($demoAccount['role']),
         ];
@@ -178,35 +241,100 @@ class DashboardController extends Controller
         return redirect()->route('login');
     }
 
-    public function storeTarif(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'jenis_kendaraan' => ['required', 'in:mobil,motor,becak,truk,bus,sepeda,lainnya'],
-            'tarif_per_jam' => ['required', 'integer', 'min:1'],
-        ]);
-
-        $tarifId = DB::table('tb_tarif')->insertGetId($validated);
-
-        $this->writeActivity(null, 'Menambahkan tarif '.ucfirst($validated['jenis_kendaraan']));
-
-        return response()->json(['id' => $tarifId], 201);
-    }
-
     public function storeArea(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'nama_area' => ['required', 'string', 'max:50'],
+            'nama_area' => ['required', 'string', 'max:100'],
             'kapasitas' => ['required', 'integer', 'min:1'],
         ]);
 
-        $areaId = DB::table('tb_area_parkir')->insertGetId([
-            ...$validated,
+        $idArea = DB::table('tb_area_parkir')->insertGetId([
+            'nama_area' => $validated['nama_area'],
+            'kapasitas' => $validated['kapasitas'],
             'terisi' => 0,
         ]);
 
-        $this->writeActivity(null, 'Menambahkan area '.$validated['nama_area']);
+        return response()->json([
+            'message' => 'Area berhasil ditambahkan.',
+            'id' => $idArea,
+        ], 201);
+    }
 
-        return response()->json(['id' => $areaId], 201);
+    public function updateArea(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'nama_area' => ['required', 'string', 'max:100'],
+            'kapasitas' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $area = DB::table('tb_area_parkir')
+            ->where('id_area', $id)
+            ->first();
+
+        if (! $area) {
+            return response()->json([
+                'message' => 'Area tidak ditemukan.',
+            ], 404);
+        }
+
+        // Kapasitas tidak boleh lebih kecil dari jumlah kendaraan yang sedang parkir
+        if ($validated['kapasitas'] < $area->terisi) {
+            return response()->json([
+                'message' => 'Kapasitas tidak boleh lebih kecil dari jumlah kendaraan yang sedang parkir.',
+            ], 422);
+        }
+
+        DB::table('tb_area_parkir')
+            ->where('id_area', $id)
+            ->update([
+                'nama_area' => $validated['nama_area'],
+                'kapasitas' => $validated['kapasitas'],
+            ]);
+
+        return response()->json([
+            'message' => 'Area berhasil diperbarui.',
+        ]);
+    }
+
+    public function deleteArea(Request $request, int $id): JsonResponse
+    {
+        $area = DB::table('tb_area_parkir')
+            ->where('id_area', $id)
+            ->first();
+
+        if (! $area) {
+            return response()->json([
+                'message' => 'Area tidak ditemukan.',
+            ], 404);
+        }
+
+        // Tidak boleh menghapus area kalau masih ada kendaraan di dalamnya
+        if ((int) $area->terisi > 0) {
+            return response()->json([
+                'message' => 'Area tidak bisa dihapus karena masih ada kendaraan yang parkir.',
+            ], 422);
+        }
+
+        // Tidak boleh menghapus area kalau masih ada transaksi aktif
+        $dipakai = DB::table('tb_transaksi')
+            ->where('id_area', $id)
+            ->where('status', 'masuk')
+            ->exists();
+
+        if ($dipakai) {
+            return response()->json([
+                'message' => 'Area tidak bisa dihapus karena masih digunakan oleh kendaraan yang sedang parkir.',
+            ], 422);
+        }
+
+        // Hapus area
+        DB::table('tb_area_parkir')
+            ->where('id_area', $id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Area berhasil dihapus.',
+        ]);
     }
 
     public function storeKendaraan(Request $request): JsonResponse
@@ -227,8 +355,7 @@ class DashboardController extends Controller
     public function storeTransaksi(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'plat_nomor' => ['required', 'string', 'max:15'],
-            'jenis_kendaraan' => ['required', 'string', 'max:20'],
+            'plat_nomor' => ['required', 'string', 'max:15', 'exists:tb_kendaraan,plat_nomor'],
             'id_area' => ['required', 'integer', 'exists:tb_area_parkir,id_area'],
         ]);
 
@@ -236,18 +363,10 @@ class DashboardController extends Controller
             ->where('plat_nomor', $validated['plat_nomor'])
             ->first();
 
-        if (! $vehicle) {
-            $vehicleId = DB::table('tb_kendaraan')->insertGetId([
-                'plat_nomor' => $validated['plat_nomor'],
-                'jenis_kendaraan' => $validated['jenis_kendaraan'],
-                'nama_pemilik' => 'Umum',
-            ]);
-        } else {
-            $vehicleId = $vehicle->id_kendaraan;
-        }
-
         $tariff = DB::table('tb_tarif')
-            ->where('jenis_kendaraan', strtolower($validated['jenis_kendaraan']))
+            ->whereRaw('LOWER(TRIM(jenis_kendaraan)) = ?', [
+                mb_strtolower(trim($vehicle->jenis_kendaraan), 'UTF-8'),
+            ])
             ->first();
 
         if (! $tariff) {
@@ -255,7 +374,7 @@ class DashboardController extends Controller
         }
 
         $transactionId = DB::table('tb_transaksi')->insertGetId([
-            'id_kendaraan' => $vehicleId,
+            'id_kendaraan' => $vehicle->id_kendaraan,
             'waktu_masuk' => now(),
             'id_tarif' => $tariff->id_tarif,
             'durasi_jam' => 0,
@@ -265,7 +384,7 @@ class DashboardController extends Controller
         ]);
 
         DB::table('tb_area_parkir')->where('id_area', $validated['id_area'])->increment('terisi');
-        $this->writeActivity(null, 'Mencatat kendaraan masuk '.$validated['plat_nomor']);
+        $this->writeActivity(null, 'Mencatat kendaraan masuk '.$vehicle->plat_nomor);
 
         return response()->json(['id' => $transactionId], 201);
     }

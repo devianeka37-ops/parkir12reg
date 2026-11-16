@@ -45,6 +45,10 @@ Route::delete('/dashboard/users/{id}', [DashboardController::class, 'deleteUser'
     ->name('dashboard.users.delete');
 Route::post('/dashboard/tariffs', [DashboardController::class, 'storeTarif'])
     ->name('dashboard.tariffs.store');
+Route::put('/dashboard/tariffs/{id}', [DashboardController::class, 'updateTarif'])
+    ->name('dashboard.tariffs.update');
+Route::delete('/dashboard/tariffs/{id}', [DashboardController::class, 'deleteTarif'])
+    ->name('dashboard.tariffs.delete');
 Route::post('/dashboard/areas', [DashboardController::class, 'storeArea'])
     ->name('dashboard.areas.store');
 Route::put('/dashboard/areas/{id}', [DashboardController::class, 'updateArea'])
@@ -53,6 +57,10 @@ Route::delete('/dashboard/areas/{id}', [DashboardController::class, 'deleteArea'
     ->name('dashboard.areas.delete');
 Route::post('/dashboard/vehicles', [DashboardController::class, 'storeKendaraan'])
     ->name('dashboard.vehicles.store');
+Route::put('/dashboard/vehicles/{id}', [DashboardController::class, 'updateKendaraan'])
+    ->name('dashboard.vehicles.update');
+Route::delete('/dashboard/vehicles/{id}', [DashboardController::class, 'deleteKendaraan'])
+    ->name('dashboard.vehicles.delete');
 Route::post('/dashboard/transactions', [DashboardController::class, 'storeTransaksi'])
     ->name('dashboard.transactions.store');
 Route::post('/dashboard/transactions/{id}/close', [DashboardController::class, 'closeTransaksi'])

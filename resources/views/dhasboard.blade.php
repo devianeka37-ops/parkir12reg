@@ -66,8 +66,7 @@ nav{display:flex;flex-direction:column;gap:2px}
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.6rem;flex-wrap:wrap;gap:10px}
 .topbar h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0}.topbar .sub{font-size:13px;color:var(--ink-dim);margin:2px 0 0}
 .topright{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.user-chip{display:flex;align-items:center;gap:.6rem;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:5px 16px 5px 5px}.user-chip .avatar{background:var(--yellow);color:var(--asphalt)}.user-chip p{margin:0;font-size:13px;font-weight:600;line-height:1.25}.user-chip span{font-size:11px;color:var(--ink-dim)}
-.view{display:none}.view.active{display:block;animation:fadeIn .2s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.view{display:none}.view.active{display:block}
 .welcome{background:var(--asphalt);color:#fff;border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.4rem;border-left:5px solid var(--yellow)}.welcome h2{font:700 18px 'Space Grotesk',sans-serif;margin:0 0 4px}.welcome h2 span{color:var(--yellow)}.welcome p{margin:0;font-size:13px;color:#B7BABC}
 .hexes{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.6rem}
 .hex-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:1.3rem 1rem 1.1rem;text-align:center;min-width:0}
@@ -88,7 +87,7 @@ nav{display:flex;flex-direction:column;gap:2px}
 .area-card h3{font-size:14px;margin:0}.area-card small{display:block;color:var(--ink-dim);font-size:11px;margin-top:3px}
 .area-total{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;white-space:nowrap}.area-total span{font:500 11px 'Inter';color:var(--ink-dim)}
 .area-bar{height:7px;background:#EFEFEC;border-radius:999px;overflow:hidden;margin-bottom:.75rem}.area-bar span{display:block;height:100%;background:var(--yellow)}
-.area-main{display:flex;align-items:center;gap:14px;margin-bottom:.8rem}.ring{position:relative;width:78px;height:78px;flex-shrink:0}.ring svg{width:100%;height:100%}.ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.ring-txt b{font:700 15px 'Space Grotesk',sans-serif}.ring-txt span{font-size:9px;color:var(--ink-dim)}.area-info{min-width:0}
+.area-main{display:flex;align-items:center;gap:14px;margin-bottom:.8rem}.gauge{position:relative;width:78px;height:78px;flex-shrink:0}.gauge svg{width:100%;height:100%}.gauge-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.gauge-txt b{font:700 15px 'Space Grotesk',sans-serif}.gauge-txt span{font-size:9px;color:var(--ink-dim)}.area-info{min-width:0}
 .area-types{display:flex;flex-wrap:wrap;gap:5px}.area-type{background:var(--yellow-bg);color:var(--yellow-dim);border-radius:999px;padding:4px 8px;font-size:11px;font-weight:600}
 .muted{color:var(--ink-dim);font-size:12px}
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.3rem 1.4rem}.panel+.panel{margin-top:14px}
@@ -117,6 +116,15 @@ td{font-size:13px;padding:.65rem .4rem;border-bottom:1px solid var(--line);white
 .receipt-foot{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:.8rem}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--asphalt);color:#fff;padding:.7rem 1.1rem;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:70}
 .toast.show{opacity:1;transform:translateX(-50%)}
+
+/* ---------- EFEK MANTUL PELAN (hanya saat kursor diarahkan, tanpa klik) ---------- */
+.hex-card,.area-card,.stat-card{will-change:transform}
+.hex-card:hover,.area-card:hover,.stat-card:hover{animation:mantul-pelan .8s cubic-bezier(.25,.8,.35,1);border-color:var(--yellow)}
+tbody tr:hover td{animation:mantul-baris .6s cubic-bezier(.25,.8,.35,1);background:#FBFAF6}
+@keyframes mantul-pelan{0%{transform:translate3d(0,0,0)}25%{transform:translate3d(0,-6px,0)}55%{transform:translate3d(0,0,0)}75%{transform:translate3d(0,-2px,0)}100%{transform:translate3d(0,0,0)}}
+@keyframes mantul-baris{0%{transform:translate3d(0,0,0)}30%{transform:translate3d(0,-3px,0)}60%{transform:translate3d(0,0,0)}78%{transform:translate3d(0,-1px,0)}100%{transform:translate3d(0,0,0)}}
+@media (prefers-reduced-motion:reduce){.hex-card:hover,.area-card:hover,.stat-card:hover,tbody tr:hover td{animation:none}}
+
 @media print{body *{visibility:hidden}#printArea,#printArea *{visibility:visible}#printArea{position:fixed;top:0;left:0;width:100%}}
 @media(max-width:980px){.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.app-body{flex-direction:column}.sidebar{width:100%}nav{flex-direction:row;overflow-x:auto}.sidebar-foot{display:none}.main{padding:1.4rem}}
@@ -391,9 +399,9 @@ function renderRingkasan(){
     const types = Object.entries(counts).map(([t,n]) => `<span class="area-type">${esc(t)} ${n}</span>`).join('');
     const C = 2 * Math.PI * 34, off = C * (1 - pct / 100), col = pct >= 90 ? 'var(--danger)' : 'var(--yellow)';
     return `<article class="area-card"><div class="area-main">
-      <div class="ring" role="img" aria-label="${pct}% terisi"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" fill="none" stroke="#EFEFEC" stroke-width="9"/>
+      <div class="gauge" role="img" aria-label="${pct}% terisi"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" fill="none" stroke="#EFEFEC" stroke-width="9"/>
         <circle cx="40" cy="40" r="34" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset .4s ease"/></svg>
-        <div class="ring-txt"><b>${pct}%</b><span>terisi</span></div></div>
+        <div class="gauge-txt"><b>${pct}%</b><span>terisi</span></div></div>
       <div class="area-info"><h3>${esc(a.nama)}</h3><small>${occ} dari ${cap} terisi</small>
         <div class="area-total">${Math.max(0,cap-occ)} <span>slot tersisa</span></div></div></div>
       <div class="area-types">${types || '<span class="muted">Belum ada kendaraan</span>'}</div></article>`;
@@ -419,7 +427,7 @@ function fillSelects(){
   a.innerHTML = areas.map(x => `<option value="${x.id}">${esc(x.nama)}</option>`).join('');
   if (av) a.value = av;
 }
- $('txPlat').addEventListener('change', () => {
+$('txPlat').addEventListener('change', () => {
   const vehicle = vehicles.find(v => v.plat === $('txPlat').value);
   $('txJenis').value = vehicle?.jenis || '';
 });

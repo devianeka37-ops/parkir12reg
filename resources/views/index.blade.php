@@ -46,11 +46,6 @@ button{font-family:'Inter',sans-serif}
     </div>
 
     <form id="loginForm" novalidate>
-      <div class="field" id="nameField">
-        <label>Nama kamu</label>
-        <input type="text" id="loginName" placeholder="Masukkan nama lengkap" autocomplete="name">
-        <div class="error-msg" id="nameError"></div>
-      </div>
       <div class="field" id="userField">
         <label>Username</label>
         <input type="text" id="loginUser" placeholder="Masukkan username" autocomplete="username">
@@ -95,11 +90,10 @@ document.getElementById('roleTabs').addEventListener('click', e => {
 document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const $ = id => document.getElementById(id);
-  const nameVal = $('loginName').value.trim(), userVal = $('loginUser').value.trim(), passVal = $('loginPass').value;
-  ['name','user','pass'].forEach(k => { $(k+'Error').textContent = ''; $(k+'Field').classList.remove('field-error'); });
+  const userVal = $('loginUser').value.trim(), passVal = $('loginPass').value;
+  ['user','pass'].forEach(k => { $(k+'Error').textContent = ''; $(k+'Field').classList.remove('field-error'); });
 
   const fail = (k, msg) => { $(k+'Field').classList.add('field-error'); $(k+'Error').textContent = msg; };
-  if (!nameVal) return fail('name', 'Nama wajib diisi.');
   if (!userVal) return fail('user', 'Username wajib diisi.');
   if (!passVal) return fail('pass', 'Kata sandi wajib diisi.');
 
@@ -112,7 +106,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
         'Accept': 'application/json',
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       },
-      body: JSON.stringify({ name: nameVal, username: userVal, password: passVal, role: selectedRole }),
+      body: JSON.stringify({ username: userVal, password: passVal, role: selectedRole }),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || 'Username, kata sandi, atau peran tidak cocok.');

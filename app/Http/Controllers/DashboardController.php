@@ -50,6 +50,7 @@ class DashboardController extends Controller
                 'tb_transaksi.*',
                 'tb_kendaraan.plat_nomor',
                 'tb_kendaraan.jenis_kendaraan',
+                'tb_kendaraan.warna',
                 'tb_tarif.tarif_per_jam',
                 'tb_area_parkir.nama_area',
                 'tb_user.nama_lengkap as nama_petugas'
@@ -495,6 +496,7 @@ class DashboardController extends Controller
                 'unique:tb_kendaraan,plat_nomor',
             ],
             'jenis_kendaraan' => ['required', 'string', 'max:20'],
+            'warna' => ['required', 'string', 'max:30', Rule::in(['Hitam', 'Putih', 'Silver', 'Abu-abu', 'Merah', 'Biru', 'Hijau', 'Kuning', 'Cokelat', 'Oranye', 'Lainnya', 'Tidak diketahui'])],
             'nama_pemilik' => ['required', 'string', 'max:100'],
         ]);
 
@@ -535,6 +537,7 @@ class DashboardController extends Controller
                     ->ignore($id, 'id_kendaraan'),
             ],
             'jenis_kendaraan' => ['required', 'string', 'max:20'],
+            'warna' => ['required', 'string', 'max:30', Rule::in(['Hitam', 'Putih', 'Silver', 'Abu-abu', 'Merah', 'Biru', 'Hijau', 'Kuning', 'Cokelat', 'Oranye', 'Lainnya', 'Tidak diketahui'])],
             'nama_pemilik' => ['required', 'string', 'max:100'],
         ]);
 

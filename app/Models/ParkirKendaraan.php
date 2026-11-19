@@ -15,6 +15,7 @@ class ParkirKendaraan extends Model
     protected $fillable = [
         'plat_nomor',
         'jenis_kendaraan',
+        'warna',
         'nama_pemilik',
     ];
 }

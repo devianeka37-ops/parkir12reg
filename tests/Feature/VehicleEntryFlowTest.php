@@ -9,6 +9,7 @@ beforeEach(function () {
         $table->increments('id_kendaraan');
         $table->string('plat_nomor')->unique();
         $table->string('jenis_kendaraan');
+        $table->string('warna', 30)->default('Tidak diketahui');
         $table->string('nama_pemilik');
     });
     Schema::create('tb_area_parkir', function (Blueprint $table) {
@@ -90,4 +91,30 @@ test('unregistered vehicle cannot be recorded as entering', function () {
 
     $this->assertDatabaseMissing('tb_kendaraan', ['plat_nomor' => 'B 9999 XYZ']);
     $this->assertDatabaseCount('tb_transaksi', 0);
+});
+
+test('vehicle color can be saved and updated', function () {
+    $this->postJson('/dashboard/vehicles', [
+        'plat_nomor' => 'B 1234 XYZ',
+        'jenis_kendaraan' => 'mobil',
+        'warna' => 'Hitam',
+        'nama_pemilik' => 'Pemilik',
+    ])->assertCreated();
+
+    $this->assertDatabaseHas('tb_kendaraan', [
+        'plat_nomor' => 'B 1234 XYZ',
+        'warna' => 'Hitam',
+    ]);
+
+    $this->putJson('/dashboard/vehicles/1', [
+        'plat_nomor' => 'B 1234 XYZ',
+        'jenis_kendaraan' => 'mobil',
+        'warna' => 'Tidak diketahui',
+        'nama_pemilik' => 'Pemilik',
+    ])->assertSuccessful();
+
+    $this->assertDatabaseHas('tb_kendaraan', [
+        'id_kendaraan' => 1,
+        'warna' => 'Tidak diketahui',
+    ]);
 });

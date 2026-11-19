@@ -11,12 +11,12 @@
     ])->values();
     $vehicles = collect($vehicles ?? [])->map(fn($i) => [
         'id' => $i->id_kendaraan, 'plat' => $i->plat_nomor, 'jenis' => ucfirst($i->jenis_kendaraan),
-        'pemilik' => $i->nama_pemilik ?? $i->pemilik ?? '',
+        'warna' => $i->warna ?? 'Tidak diketahui', 'pemilik' => $i->nama_pemilik ?? $i->pemilik ?? '',
     ])->values();
     $txs = collect($transaksi ?? []);
     $transactions = $txs->map(fn($i) => [
         'id' => 'TX-' . str_pad($i->id_parkir, 4, '0', STR_PAD_LEFT), 'dbId' => $i->id_parkir,
-        'plat' => $i->plat_nomor, 'jenis' => ucfirst($i->jenis_kendaraan), 'area' => $i->nama_area,
+        'plat' => $i->plat_nomor, 'jenis' => ucfirst($i->jenis_kendaraan), 'warna' => $i->warna ?? 'Tidak diketahui', 'area' => $i->nama_area,
         'masukTs' => strtotime($i->waktu_masuk) * 1000,
         'keluarTs' => $i->waktu_keluar ? strtotime($i->waktu_keluar) * 1000 : null,
         'total' => $i->biaya_total ?? 0,
@@ -97,6 +97,7 @@ th{text-align:left;font-size:12px;color:var(--ink-dim);font-weight:600;padding:0
 td{font-size:13px;padding:.65rem .4rem;border-bottom:1px solid var(--line);white-space:nowrap}tr:last-child td{border-bottom:none}
 .badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px}
 .badge.success{background:var(--green-bg);color:var(--green)}.badge.pending{background:var(--yellow-bg);color:var(--yellow-dim)}.badge.neutral{background:#EFEFEC;color:var(--ink-dim)}
+.vehicle-color{display:inline-flex;align-items:center;gap:7px}.vehicle-color i{width:13px;height:13px;border:1px solid #0002;border-radius:50%;background:var(--swatch);flex-shrink:0}
 .row-actions{display:flex;gap:6px}
 .icon-btn{background:none;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--ink)}
 .icon-btn:hover{background:#F5F5F2}.icon-btn:disabled{opacity:.4;cursor:not-allowed}
@@ -169,19 +170,20 @@ tbody tr:hover td{animation:mantul-baris .6s cubic-bezier(.25,.8,.35,1);backgrou
         <div class="filter-row">
           <div class="field"><label>Kendaraan belum parkir</label><select id="txPlat" style="width:220px"></select></div>
           <div class="field"><label>Jenis kendaraan</label><input type="text" id="txJenis" readonly style="width:140px"></div>
+          <div class="field"><label>Warna kendaraan</label><input type="text" id="txWarna" readonly style="width:140px"></div>
           <div class="field"><label>Area parkir</label><select id="txArea" style="width:160px"></select></div>
           <button class="btn" id="btnCatatMasuk">+ Catat masuk</button>
         </div>
       </div>
       <div class="panel">
         <div class="panel-head"><h2>Transaksi berjalan &amp; selesai</h2><div class="muted" id="txCount"></div></div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Plat</th><th>Jenis</th><th>Area</th><th>Masuk</th><th>Keluar</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="txTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Plat</th><th>Jenis</th><th>Warna</th><th>Area</th><th>Masuk</th><th>Keluar</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="txTable"></tbody></table></div>
       </div>
     </section>
 
     <section class="view" id="view-struk">
       <div class="panel"><div class="panel-head"><h2>Kendaraan keluar</h2><div class="muted">Kendaraan yang sudah keluar dan siap dicetak struknya</div></div>
-      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Plat</th><th>Area</th><th>Keluar</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="strukTable"></tbody></table></div></div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Plat</th><th>Warna</th><th>Area</th><th>Keluar</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="strukTable"></tbody></table></div></div>
     </section>
 
     <section class="view" id="view-rekap">
@@ -270,6 +272,9 @@ async function api(url, method, payload, msg, view){
 
 /* ---------- KONFIGURASI CRUD (admin) ---------- */
 const JENIS = ['Mobil','Motor','Becak','Truk','Bus','Sepeda','Lainnya'];
+const WARNA_KENDARAAN = ['Hitam','Putih','Silver','Abu-abu','Merah','Biru','Hijau','Kuning','Cokelat','Oranye','Lainnya','Tidak diketahui'];
+const WARNA_SWATCHES = { Hitam:'#202325', Putih:'#FFFFFF', Silver:'#C0C0C0', 'Abu-abu':'#858B8E', Merah:'#D44336', Biru:'#3478B8', Hijau:'#39815B', Kuning:'#F2C94C', Cokelat:'#80543D', Oranye:'#E77B32', Lainnya:'#A1A1AA', 'Tidak diketahui':'#A1A1AA' };
+const warnaKendaraanCell = warna => `<span class="vehicle-color"><i style="--swatch:${WARNA_SWATCHES[warna] || WARNA_SWATCHES.Lainnya}"></i>${esc(warna || 'Tidak diketahui')}</span>`;
 const E = {
   users: { url:'/dashboard/users', data:accounts, title:'akun', add:'+ Tambah user',
     cols:[['name','Nama'],['username','Username'],['role','Peran'],['status','Status',v=>`<span class="badge ${v==='Aktif'?'success':'neutral'}">${esc(v)}</span>`]],
@@ -293,11 +298,11 @@ const E = {
     check:v=>{ if(!v.nama||!(parseInt(v.kapasitas)>0)) return 'Nama area dan kapasitas wajib diisi dengan benar.'; },
     body:v=>({nama_area:v.nama,kapasitas:parseInt(v.kapasitas)}) },
   vehicles: { url:'/dashboard/vehicles', data:vehicles, title:'kendaraan', add:'+ Tambah kendaraan',
-    cols:[['plat','Plat nomor'],['jenis','Jenis'],['pemilik','Pemilik']],
-    fields:[['plat','Plat nomor','text'],['jenis','Jenis','text'],['pemilik','Pemilik','text']],
+    cols:[['plat','Plat nomor'],['jenis','Jenis'],['warna','Warna',warnaKendaraanCell],['pemilik','Pemilik']],
+    fields:[['plat','Plat nomor','text'],['jenis','Jenis','text'],['warna','Warna kendaraan','select',WARNA_KENDARAAN],['pemilik','Pemilik','text']],
     label:x=>x.plat,
-    check:v=>{ if(!v.plat||!v.jenis||!v.pemilik) return 'Plat, jenis, dan pemilik wajib diisi.'; },
-    body:v=>({plat_nomor:v.plat,jenis_kendaraan:v.jenis.toLowerCase(),nama_pemilik:v.pemilik}) },
+    check:v=>{ if(!v.plat||!v.jenis||!v.warna||!v.pemilik) return 'Plat, jenis, warna, dan pemilik wajib diisi.'; },
+    body:v=>({plat_nomor:v.plat,jenis_kendaraan:v.jenis.toLowerCase(),warna:v.warna,nama_pemilik:v.pemilik}) },
 };
 
 function renderEntity(k){
@@ -417,29 +422,32 @@ function renderLog(){
 
 /* ---------- TRANSAKSI (petugas) ---------- */
 function fillSelects(){
-  const p = $('txPlat'), j = $('txJenis'), a = $('txArea'), pv = p.value, av = a.value;
+  const p = $('txPlat'), j = $('txJenis'), w = $('txWarna'), a = $('txArea'), pv = p.value, av = a.value;
   const kendaraanAktif = new Set(transactions.filter(t => t.status === 'Berlangsung').map(t => t.plat));
   const kendaraanTersedia = vehicles.filter(v => !kendaraanAktif.has(v.plat));
   p.innerHTML = kendaraanTersedia.map(v => `<option value="${esc(v.plat)}">${esc(v.plat)} · ${esc(v.jenis)}</option>`).join('')
     || `<option value="">${vehicles.length ? 'Semua kendaraan sedang parkir' : 'Belum ada kendaraan terdaftar'}</option>`;
   if (kendaraanTersedia.some(v => v.plat === pv)) p.value = pv;
-  j.value = kendaraanTersedia.find(v => v.plat === p.value)?.jenis || '';
+  const selectedVehicle = kendaraanTersedia.find(v => v.plat === p.value);
+  j.value = selectedVehicle?.jenis || '';
+  w.value = selectedVehicle?.warna || '';
   a.innerHTML = areas.map(x => `<option value="${x.id}">${esc(x.nama)}</option>`).join('');
   if (av) a.value = av;
 }
 $('txPlat').addEventListener('change', () => {
   const vehicle = vehicles.find(v => v.plat === $('txPlat').value);
   $('txJenis').value = vehicle?.jenis || '';
+  $('txWarna').value = vehicle?.warna || '';
 });
 function renderTransaksi(){
   fillSelects();
   $('txCount').textContent = transactions.length + ' transaksi tercatat';
   $('txTable').innerHTML = transactions.slice().reverse().map(t => {
     const done = t.status === 'Selesai';
-    return `<tr><td>${t.id}</td><td>${esc(t.plat)}</td><td>${esc(t.jenis)}</td><td>${esc(t.area)}</td><td>${fmtTime(t.masukTs)}</td><td>${fmtTime(t.keluarTs)}</td>
+    return `<tr><td>${t.id}</td><td>${esc(t.plat)}</td><td>${esc(t.jenis)}</td><td>${esc(t.warna)}</td><td>${esc(t.area)}</td><td>${fmtTime(t.masukTs)}</td><td>${fmtTime(t.keluarTs)}</td>
       <td>${done ? rupiah(t.total) : '—'}</td><td><span class="badge ${done?'success':'pending'}">${t.status}</span></td>
       <td>${done ? `<button class="icon-btn" data-struk="${t.id}">Cetak struk</button>` : `<button class="icon-btn" data-keluar="${t.id}">Catat keluar</button>`}</td></tr>`;
-  }).join('') || '<tr><td colspan="9" class="muted">Belum ada transaksi. Catat kendaraan masuk terlebih dahulu.</td></tr>';
+  }).join('') || '<tr><td colspan="10" class="muted">Belum ada transaksi. Catat kendaraan masuk terlebih dahulu.</td></tr>';
 }
 $('btnCatatMasuk').addEventListener('click', async () => {
   const plat = $('txPlat').value.trim(), jenis = $('txJenis').value, area = $('txArea').value;
@@ -467,15 +475,15 @@ $('saveKeluarModal').addEventListener('click', async () => {
 function renderStruk(){
   $('strukTable').innerHTML = transactions.slice().reverse().map(t => {
     const d = t.status === 'Selesai';
-    return `<tr><td>${t.id}</td><td>${esc(t.plat)}</td><td>${esc(t.area)}</td><td>${d ? fmtTime(t.keluarTs) : '—'}</td><td>${d ? rupiah(t.total) : '—'}</td>
+    return `<tr><td>${t.id}</td><td>${esc(t.plat)}</td><td>${esc(t.warna)}</td><td>${esc(t.area)}</td><td>${d ? fmtTime(t.keluarTs) : '—'}</td><td>${d ? rupiah(t.total) : '—'}</td>
       <td><span class="badge ${d?'success':'pending'}">${d ? 'Selesai' : 'Menunggu keluar'}</span></td>
       <td><button class="icon-btn" ${d ? `data-struk="${t.id}"` : 'disabled title="Catat kendaraan keluar dulu di menu Kendaraan Masuk"'}>🖨 Cetak</button></td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="muted">Belum ada transaksi.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="muted">Belum ada transaksi.</td></tr>';
 }
 function printStruk(id){
   const t = transactions.find(x => x.id === id), row = (a,b) => `<div class="receipt-row"><span>${a}</span><span>${esc(b)}</span></div>`;
   $('receiptContent').innerHTML = `<div class="receipt-head"><b>Parkir</b><span>${esc(t.area)}</span></div><hr>` +
-    row('No. Transaksi',t.id) + row('Plat nomor',t.plat) + row('Jenis',t.jenis) + row('Masuk',fmtTime(t.masukTs)) + row('Keluar',fmtTime(t.keluarTs)) +
+    row('No. Transaksi',t.id) + row('Plat nomor',t.plat) + row('Jenis',t.jenis) + row('Warna',t.warna) + row('Masuk',fmtTime(t.masukTs)) + row('Keluar',fmtTime(t.keluarTs)) +
     row('Durasi',fmtDuration(t.keluarTs - t.masukTs)) + row('Petugas',t.petugas) +
     `<hr><div class="receipt-total"><span>Total</span><span>${rupiah(t.total)}</span></div><div class="receipt-foot">Terima kasih — simpan struk ini<br>sebagai bukti pembayaran.</div>`;
   openModal('modalStruk');
